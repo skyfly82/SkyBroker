@@ -15,6 +15,7 @@ class Shipment extends Model
 
     protected $fillable = [
         'id',
+        'service_code',
         'carrier',
         'tracking_number',
         'status',
