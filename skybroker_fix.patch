@@ -1,0 +1,83 @@
+diff --git a/routes/api.php b/routes/api.php
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/routes/api.php
+@@
++<?php
++
++use Illuminate\Support\Facades\Route;
++use App\Http\Controllers\Api\V1\HealthController;
++use App\Http\Controllers\Api\V1\ShipmentsController;
++use App\Http\Controllers\Api\V1\PaymentsController;
++use App\Http\Controllers\Api\V1\WebhooksController;
++
++Route::get('/health', HealthController::class);
++
++Route::prefix('v1')->group(function () {
++    Route::post('/shipments', [ShipmentsController::class, 'store']);
++    Route::get('/shipments/{id}/label', [ShipmentsController::class, 'label']);
++    Route::get('/shipments/{id}/tracking', [ShipmentsController::class, 'tracking']);
++
++    Route::post('/payments/{shipmentId}/start', [PaymentsController::class, 'start']);
++    Route::post('/payments/simulate', [PaymentsController::class, 'simulate']);
++
++    Route::post('/webhooks/incoming/payments', [WebhooksController::class, 'payments']);
++});
+diff --git a/app/Enums/ShipmentStatus.php b/app/Enums/ShipmentStatus.php
+index abcdef1..2222222 100644
+--- a/app/Enums/ShipmentStatus.php
++++ b/app/Enums/ShipmentStatus.php
+@@
+-        return in_array($to, $allowed[$this] ?? [], true);
++        return in_array($to, $allowed[$this->value] ?? [], true);
+diff --git a/app/Http/Controllers/Api/V1/PaymentsController.php b/app/Http/Controllers/Api/V1/PaymentsController.php
+new file mode 100644
+index 0000000..3333333
+--- /dev/null
++++ b/app/Http/Controllers/Api/V1/PaymentsController.php
+@@
++<?php
++
++namespace App\Http\Controllers\Api\V1;
++
++use App\Enums\ShipmentStatus;
++use App\Http\Controllers\Controller;
++use App\Models\Payment;
++use App\Models\Shipment;
++use Illuminate\Http\Request;
++use Illuminate\Support\Str;
++
++class PaymentsController extends Controller
++{
++    public function start(Request $request, string $shipmentId)
++    {
++        $shipment = Shipment::findOrFail($shipmentId);
++
++        $payment = Payment::create([
++            'id'           => Str::ulid()->toBase32(),
++            'shipment_id'  => $shipment->id,
++            'provider'     => 'simulator',
++            'status'       => 'PENDING',
++            'amount_pln'   => 0,
++            'currency'     => 'PLN',
++            'initiated_at' => now(),
++        ]);
++
++        if ($shipment->status->canTransitionTo(ShipmentStatus::PENDING_PAYMENT)) {
++            $shipment->status = ShipmentStatus::PENDING_PAYMENT;
++            $shipment->save();
++        }
++
++        return response()->json([
++            'payment_id'   => $payment->id,
++            'provider'     => $payment->provider,
++            'redirect_url' => null,
++        ]);
++    }
++
++    public function simulate(Request $request)
++    {
++        $data = $request->validate([
++            'payment_id' => ['r]()_
+

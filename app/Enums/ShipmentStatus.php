@@ -14,40 +14,9 @@ enum ShipmentStatus: string
     case CANCELLED       = 'CANCELLED';
     case RETURNED        = 'RETURNED';
 
-    /**
-     * Czy bieżący status może przejść do $to
-     *
-     * Uwaga: używamy mapy indeksowanej po stringach (->value),
-     * żeby uniknąć błędu "Cannot access offset of type ... on array".
-     */
     public function canTransitionTo(self $to): bool
     {
-        $allowed = self::allowedTransitions();
-
-        return in_array($to, $allowed[$this->value] ?? [], true);
-    }
-
-    /**
-     * Czy to poprawna sekwencja przejścia.
-     */
-    public static function assertCanTransition(self $from, self $to): void
-    {
-        if (! $from->canTransitionTo($to)) {
-            throw new \LogicException(sprintf(
-                'Invalid shipment status transition: %s -> %s',
-                $from->value,
-                $to->value
-            ));
-        }
-    }
-
-    /**
-     * Mapa dozwolonych przejść statusów.
-     * Klucze po stringach (case->value), wartości to tablice enumów.
-     */
-    private static function allowedTransitions(): array
-    {
-        return [
+        $allowed = [
             self::DRAFT->value           => [self::PENDING_PAYMENT, self::CANCELLED],
             self::PENDING_PAYMENT->value => [self::PAID, self::CANCELLED],
             self::PAID->value            => [self::LABEL_READY, self::CANCELLED],
@@ -58,5 +27,7 @@ enum ShipmentStatus: string
             self::CANCELLED->value       => [],
             self::RETURNED->value        => [],
         ];
+
+        return in_array($to, $allowed[$this->value] ?? [], true);
     }
 }
