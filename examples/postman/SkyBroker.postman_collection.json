@@ -1,0 +1,20 @@
+{
+  "info": {
+    "name": "SkyBroker (greenfield)",
+    "_postman_id": "f7f7f7aa-bbbb-cccc-dddd-eeeeffff1111",
+    "description": "Kolekcja dev do SkyBroker (Docker). Ustaw base_url.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    { "name": "Health", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] } } },
+    { "name": "Create shipment (draft)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"service_code\": \"INPOST_LOCKER_STANDARD\",\n  \"reference\": \"ORDER-1001\",\n  \"receiver\": {\"name\":\"Jan Nowak\",\"phone\":\"+48500100100\",\"street\":\"Marszałkowska\",\"city\":\"Warszawa\",\"postal_code\":\"00-001\",\"country_code\":\"PL\"},\n  \"sender\": {\"name\":\"ACME Sp. z o.o.\",\"phone\":\"+48500100101\",\"street\":\"Puławska\",\"city\":\"Warszawa\",\"postal_code\":\"02-001\",\"country_code\":\"PL\"},\n  \"parcel\": {\"weight_kg\": 1.2}\n}" }, "url": { "raw": "{{base_url}}/api/v1/shipments", "host": ["{{base_url}}"], "path": ["api","v1","shipments"] } } },
+    { "name": "Start payment", "request": { "method": "POST", "header": [], "url": { "raw": "{{base_url}}/api/v1/payments/{{shipment_id}}/start", "host": ["{{base_url}}"], "path": ["api","v1","payments","{{shipment_id}}","start"] } } },
+    { "name": "Simulate payment (dev)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"shipment_id\": \"{{shipment_id}}\" }" }, "url": { "raw": "{{base_url}}/api/v1/payments/simulate", "host": ["{{base_url}}"], "path": ["api","v1","payments","simulate"] } } },
+    { "name": "Get label (PDF)", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/api/v1/shipments/{{shipment_id}}/label?format=A6", "host": ["{{base_url}}"], "path": ["api","v1","shipments","{{shipment_id}}","label"], "query": [{ "key": "format", "value": "A6" }] } } },
+    { "name": "Tracking", "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/api/v1/shipments/{{shipment_id}}/tracking", "host": ["{{base_url}}"], "path": ["api","v1","shipments","{{shipment_id}}","tracking"] } } }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "shipment_id", "value": "" }
+  ]
+}
