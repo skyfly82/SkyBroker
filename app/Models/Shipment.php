@@ -14,24 +14,9 @@ class Shipment extends Model
     protected $table = 'shipments';
 
     protected $fillable = [
-        'id',
-        'service_code',
-        'carrier',
-        'tracking_number',
-        'status',
-        'price_pln',
-        'receiver_name',
-        'receiver_phone',
-        'receiver_street',
-        'receiver_city',
-        'receiver_postal_code',
-        'receiver_country_code',
-        'sender_name',
-        'sender_phone',
-        'sender_street',
-        'sender_city',
-        'sender_postal_code',
-        'sender_country_code',
+        'id','service_code','carrier','carrier_shipment_id','tracking_number','status','price_pln',
+        'receiver_name','receiver_phone','receiver_street','receiver_city','receiver_postal_code','receiver_country_code',
+        'sender_name','sender_phone','sender_street','sender_city','sender_postal_code','sender_country_code',
         'parcel_weight_kg',
     ];
 

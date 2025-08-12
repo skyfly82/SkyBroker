@@ -34,5 +34,10 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'inpost' => [
+        'api_url' => env('INPOST_API_URL'),
+        'token_url' => env('INPOST_TOKEN_URL'),
+        'token' => env('INPOST_TOKEN'),
+        'organization_id' => env('INPOST_ORGANIZATION_ID'),]
 
 ];

@@ -30,29 +30,89 @@ class ShipmentsController extends Controller
         ]);
 
         $shipment = Shipment::create([
-            'id'                 => Str::ulid()->toBase32(),
-            'status'             => ShipmentStatus::DRAFT,
-            'service_code'       => $data['service_code'],
-            'receiver_name'      => $data['receiver']['name'],
-            'receiver_phone'     => $data['receiver']['phone'],
-            'receiver_street'    => $data['receiver']['street'],
-            'receiver_city'      => $data['receiver']['city'],
+            'id'                    => Str::ulid()->toBase32(),
+            'status'                => ShipmentStatus::DRAFT,
+            'service_code'          => $data['service_code'],
+            'receiver_name'         => $data['receiver']['name'],
+            'receiver_phone'        => $data['receiver']['phone'],
+            'receiver_street'       => $data['receiver']['street'],
+            'receiver_city'         => $data['receiver']['city'],
             'receiver_postal_code'  => $data['receiver']['postal_code'],
             'receiver_country_code' => strtoupper($data['receiver']['country_code']),
-            'sender_name'        => $data['sender']['name'],
-            'sender_phone'       => $data['sender']['phone'],
-            'sender_street'      => $data['sender']['street'],
-            'sender_city'        => $data['sender']['city'],
-            'sender_postal_code' => $data['sender']['postal_code'],
-            'sender_country_code'=> strtoupper($data['sender']['country_code']),
-            'parcel_weight_kg'   => $data['parcel']['weight_kg'],
+            'sender_name'           => $data['sender']['name'],
+            'sender_phone'          => $data['sender']['phone'],
+            'sender_street'         => $data['sender']['street'],
+            'sender_city'           => $data['sender']['city'],
+            'sender_postal_code'    => $data['sender']['postal_code'],
+            'sender_country_code'   => strtoupper($data['sender']['country_code']),
+            'parcel_weight_kg'      => $data['parcel']['weight_kg'],
         ]);
 
+        // Wyznacz i zapisz przewoźnika (na razie wszystko INPOST_* => INPOST)
+        $carrierCode = str_starts_with(strtoupper($data['service_code']), 'INPOST') ? 'INPOST' : null;
+        if ($carrierCode) {
+            $shipment->carrier = $carrierCode;
+            $shipment->save();
+        }
+
+        // Utworzenie przesyłki u przewoźnika (zapisze carrier_shipment_id / tracking_number).
+        if ($carrierCode === 'INPOST') {
+            try {
+                $resolver = new \App\Domain\Carriers\CarrierResolver();
+                /** @var \App\Domain\Carriers\Contracts\CarrierInterface $carrier */
+                $carrier = $resolver->resolve($carrierCode);
+
+                $carrier->createShipment($shipment); // nic nie zwraca, zapis w środku
+                $shipment->refresh();
+
+                // jeśli się udało – podnieś status
+                if ($shipment->carrier_shipment_id || $shipment->tracking_number) {
+                    $shipment->status = ShipmentStatus::CREATED;
+                    $shipment->save();
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('ShipX create failed, label będzie niedostępny do czasu naprawy', [
+                    'shipment_id' => $shipment->id,
+                    'error'       => $e->getMessage(),
+                ]);
+                // świadomie nie przerywamy: zwracamy 201 z DRAFT, UI może spróbować później
+            }
+        }
+
         return response()->json([
-            'id'              => $shipment->id,
-            'status'          => $shipment->status->value,
-            'created_at'      => $shipment->created_at?->toISOString(),
+            'id'         => $shipment->id,
+            'status'     => $shipment->status->value,
+            'created_at' => $shipment->created_at?->toISOString(),
         ], 201);
+    }
+
+    public function label(string $id, Request $request)
+    {
+        $shipment = Shipment::findOrFail($id);
+
+        // jeśli nie mamy identyfikatorów z przewoźnika – zwróć 409 zamiast 500
+        if (empty($shipment->carrier_shipment_id) && empty($shipment->tracking_number)) {
+            return response()->json([
+                'message' => 'Etykieta niedostępna: przesyłka nie została jeszcze utworzona u przewoźnika.',
+            ], 409);
+        }
+
+        $format = strtoupper($request->query('format', 'A6')); // A6|A4|ZPL
+        $carrierCode = $shipment->carrier ?: 'INPOST';
+
+        $resolver = new \App\Domain\Carriers\CarrierResolver();
+        /** @var \App\Domain\Carriers\Contracts\CarrierInterface $client */
+        $client   = $resolver->resolve($carrierCode);
+
+        $content = $client->getLabel($shipment, $format);
+
+        $isZpl = ($format === 'ZPL');
+        $mime  = $isZpl ? 'text/plain' : 'application/pdf';
+        $ext   = $isZpl ? 'zpl' : 'pdf';
+
+        return response($content, 200)
+            ->header('Content-Type', $mime)
+            ->header('Content-Disposition', "inline; filename=\"label_{$shipment->id}.{$ext}\"");
     }
 
     public function tracking(string $id)

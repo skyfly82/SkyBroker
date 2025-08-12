@@ -2,11 +2,16 @@
 
 namespace App\Domain\Carriers;
 
+use App\Models\Shipment;
+
 interface CarrierInterface
 {
-    public function createShipment(array $payload): array;
-    public function getLabel(string $shipmentId, string $format = 'A6'): string;
-    public function getPickupPoints(array $filters = []): array;
-    public function manifest(array $shipmentIds): array;
-    public function track(string $trackingNumber): array;
+    /**
+     * Pobiera etykietę dla przesyłki.
+     *
+     * @param  Shipment $shipment
+     * @param  string   $format   np. "A4", "A6", "ZPL"
+     * @return string   binarka PDF/ZPL
+     */
+    public function getLabel(Shipment $shipment, string $format): string;
 }

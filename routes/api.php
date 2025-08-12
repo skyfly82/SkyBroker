@@ -17,4 +17,6 @@ Route::prefix('v1')->group(function () {
     Route::post('/payments/simulate', [PaymentsController::class, 'simulate']);
 
     Route::post('/webhooks/incoming/payments', [WebhooksController::class, 'payments']);
+
+
 });
